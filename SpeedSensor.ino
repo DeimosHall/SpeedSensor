@@ -1,22 +1,54 @@
-// Contador de RPM  by: http://elprofegarcia.com
-// Conexion de la entrada de la interrupcion 0  por el PIN 2
-// Configurar el monitor serial a 57600 Baudios para visualizar los RPM
-// Tienda para comprar Materiales http://dinastiatecnologica.com
+#define pwmPin 11
+#define sensor 2   // Interruptions for RPM
 
-volatile int contador = 0;   // Variable entera que se almacena en la RAM del Micro
- 
+//int something = (100 * 25.5 / 182.4) * 10;
+int pwmOut;
+double input, output, setPoint;
+double kp = 2, ki = 1, kd = 5;
+unsigned long currentTime, previousTime = 0;
+double elapsedTime;
+double error, lastError, cumError, rateError;
+
+volatile int counter = 0;                   // volatile is storaged in RAM
+
 void setup() {
   Serial.begin(57600);
-  attachInterrupt(0,interrupcion0,RISING);  // Interrupcion 0 (pin2) 
-}                                           // LOW, CHANGE, RISING, FALLING
- 
-void loop() {
-  delay(999);                               // retardo de casi 1 segundo
-  Serial.print(contador*(60/7));              // Como son dos interrupciones por vuelta (contador * (60/2))
-  Serial.println(" RPM");                   //  El numero 2 depende del numero aspas de la helise del motor en prueba
-  contador = 0;
+  attachInterrupt(digitalPinToInterrupt(sensor), rmpCounter, RISING);    // pin2 interruption
+
+  setPoint = 1000;
 }
  
-void interrupcion0() {                      // Funcion que se ejecuta durante cada interrupion
-    contador++;                             // Se incrementa en uno el contador
+void loop() {
+  delay(999);
+  input = counter*(60/7);                   // RPM -> 60 / number of blades = 7, values -> 0 : 1800
+  output = computePID(input);
+  
+  pwmOut = (output * 0.1 * 25.5 / 182.4) * 10;
+  analogWrite(pwmPin,255);
+
+  Serial.print(pwmOut);
+  Serial.print(",");
+  Serial.print(input);
+  Serial.println(" RPM");
+  counter = 0;
+}
+ 
+void rmpCounter() {                         // Function for interruption
+    counter++;
+}
+
+double computePID(double inp) {
+  currentTime = millis();                                 // Get current time
+  elapsedTime = (double)(currentTime - previousTime);
+        
+  error = setPoint - input;
+  cumError += error * elapsedTime;
+  rateError = (error - lastError) / elapsedTime;
+ 
+  double output = kp*error + ki*cumError + kd*rateError;
+ 
+  lastError = error;anterior
+  previousTime = currentTime;
+ 
+  return output;
 }
