@@ -1,4 +1,4 @@
-#define pwmPin 11
+#define pwmPin 3
 #define sensor 2   // Interruptions for RPM
 
 //int something = (100 * 25.5 / 182.4) * 10;
